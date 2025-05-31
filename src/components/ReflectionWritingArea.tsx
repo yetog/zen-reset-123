@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
-import { Save, Lightbulb } from 'lucide-react';
+import { Save, Lightbulb, AlertCircle } from 'lucide-react';
+import LoadingSpinner from './LoadingSpinner';
 
 interface ReflectionWritingAreaProps {
   currentReflection: string;
@@ -16,6 +17,8 @@ const ReflectionWritingArea: React.FC<ReflectionWritingAreaProps> = ({
   onSave,
   isSaving
 }) => {
+  const [error, setError] = useState<string>('');
+
   const prompts = [
     "What am I grateful for today?",
     "What did I learn about myself today?",
@@ -31,16 +34,25 @@ const ReflectionWritingArea: React.FC<ReflectionWritingAreaProps> = ({
     return prompts[Math.floor(Math.random() * prompts.length)];
   };
 
+  const handleSave = async () => {
+    try {
+      setError('');
+      await onSave();
+    } catch (err) {
+      setError('Failed to save reflection. Please try again.');
+    }
+  };
+
   return (
-    <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 mb-8">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-light text-white">Today's Reflection</h2>
+    <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-6 md:p-8 mb-8 transition-all duration-300 hover:bg-white/15">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+        <h2 className="text-xl md:text-2xl font-light text-white">Today's Reflection</h2>
         <button
           onClick={() => onReflectionChange(getRandomPrompt())}
-          className="flex items-center space-x-2 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white hover:bg-white/20 transition-all duration-300"
+          className="flex items-center space-x-2 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white hover:bg-white/20 transition-all duration-300 text-sm"
         >
           <Lightbulb size={16} />
-          <span className="text-sm">Get Prompt</span>
+          <span>Get Prompt</span>
         </button>
       </div>
       
@@ -48,19 +60,30 @@ const ReflectionWritingArea: React.FC<ReflectionWritingAreaProps> = ({
         value={currentReflection}
         onChange={(e) => onReflectionChange(e.target.value)}
         placeholder="Begin your reflection... What's on your mind today?"
-        className="min-h-[200px] bg-white/5 border-white/20 text-white placeholder:text-purple-300 resize-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/50"
+        className="min-h-[150px] md:min-h-[200px] bg-white/5 border-white/20 text-white placeholder:text-purple-300 resize-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/50 transition-all duration-300"
       />
       
-      <div className="flex justify-between items-center mt-6">
+      {error && (
+        <div className="flex items-center space-x-2 mt-4 p-3 bg-red-500/10 border border-red-400/20 rounded-xl">
+          <AlertCircle size={16} className="text-red-400" />
+          <span className="text-red-300 text-sm">{error}</span>
+        </div>
+      )}
+      
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-6 gap-4">
         <span className="text-purple-300 text-sm">
           {currentReflection.length} characters
         </span>
         <button
-          onClick={onSave}
+          onClick={handleSave}
           disabled={!currentReflection.trim() || isSaving}
-          className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-400 text-purple-900 rounded-xl hover:from-yellow-300 hover:to-orange-300 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-400 text-purple-900 rounded-xl hover:from-yellow-300 hover:to-orange-300 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed min-w-[140px] justify-center"
         >
-          <Save size={16} />
+          {isSaving ? (
+            <LoadingSpinner size="sm" />
+          ) : (
+            <Save size={16} />
+          )}
           <span>{isSaving ? 'Saving...' : 'Save Reflection'}</span>
         </button>
       </div>
