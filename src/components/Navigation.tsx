@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Home } from 'lucide-react';
@@ -9,11 +8,26 @@ const Navigation = () => {
   const navigate = useNavigate();
   const isHomePage = location.pathname === '/';
 
+  // Define logical parent routes
+  const getParentRoute = (currentPath: string): string => {
+    const pathSegments = currentPath.split('/').filter(Boolean);
+    
+    if (pathSegments.length <= 1) {
+      return '/';
+    }
+    
+    // Remove the last segment to get parent
+    const parentSegments = pathSegments.slice(0, -1);
+    return '/' + parentSegments.join('/');
+  };
+
   const handleBackClick = () => {
     if (isHomePage) {
       return;
     }
-    navigate(-1);
+    
+    const parentRoute = getParentRoute(location.pathname);
+    navigate(parentRoute);
   };
 
   return (
