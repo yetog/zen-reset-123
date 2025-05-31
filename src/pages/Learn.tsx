@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ArrowLeft, Book, Clock, CheckCircle } from 'lucide-react';
+import { Book, Clock, CheckCircle } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 
 const Learn = () => {
@@ -8,42 +8,42 @@ const Learn = () => {
     {
       id: 1,
       title: 'Introduction to Mindfulness',
-      duration: '10 min',
+      duration: '5 min',
       description: 'Learn the fundamentals of mindful awareness and present-moment attention',
       completed: true
     },
     {
       id: 2,
       title: 'Breathing Techniques',
-      duration: '15 min',
+      duration: '5 min',
       description: 'Master basic breathing patterns that form the foundation of meditation',
       completed: true
     },
     {
       id: 3,
       title: 'Body Scan Meditation',
-      duration: '20 min',
+      duration: '5 min',
       description: 'Develop awareness of physical sensations and learn to relax deeply',
       completed: false
     },
     {
       id: 4,
       title: 'Loving-Kindness Practice',
-      duration: '18 min',
+      duration: '5 min',
       description: 'Cultivate compassion and positive emotions toward yourself and others',
       completed: false
     },
     {
       id: 5,
       title: 'Dealing with Difficult Emotions',
-      duration: '25 min',
+      duration: '5 min',
       description: 'Learn healthy ways to observe and work with challenging feelings',
       completed: false
     },
     {
       id: 6,
       title: 'Walking Meditation',
-      duration: '12 min',
+      duration: '5 min',
       description: 'Bring mindfulness into movement and daily activities',
       completed: false
     }

@@ -9,6 +9,9 @@ import Meditate from "./pages/Meditate";
 import Learn from "./pages/Learn";
 import Reflect from "./pages/Reflect";
 import SilentMeditation from "./pages/SilentMeditation";
+import GuidedMeditation from "./pages/GuidedMeditation";
+import WaveFrequencySounds from "./pages/WaveFrequencySounds";
+import BreathWork from "./pages/BreathWork";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +26,9 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/meditate" element={<Meditate />} />
           <Route path="/meditate/silent" element={<SilentMeditation />} />
+          <Route path="/meditate/guided" element={<GuidedMeditation />} />
+          <Route path="/meditate/sounds" element={<WaveFrequencySounds />} />
+          <Route path="/meditate/breathwork" element={<BreathWork />} />
           <Route path="/learn" element={<Learn />} />
           <Route path="/reflect" element={<Reflect />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
