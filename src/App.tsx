@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,12 +9,11 @@ import Meditate from "./pages/Meditate";
 import Learn from "./pages/Learn";
 import Reflect from "./pages/Reflect";
 import SilentMeditation from "./pages/SilentMeditation";
-import GuidedMeditation from "./pages/GuidedMeditation";
+import TraditionalMeditation from "./pages/TraditionalMeditation";
 import WaveFrequencySounds from "./pages/WaveFrequencySounds";
 import BreathWork from "./pages/BreathWork";
 import NotFound from "./pages/NotFound";
 import GuidedMeditationTypes from "./pages/GuidedMeditationTypes";
-import TraditionalMeditation from "./pages/TraditionalMeditation";
 
 const queryClient = new QueryClient();
 
