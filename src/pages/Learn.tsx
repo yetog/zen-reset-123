@@ -1,119 +1,204 @@
 
-import React from 'react';
-import { Book, Clock, CheckCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { BookOpen, Clock, CheckCircle, Play } from 'lucide-react';
 import Navigation from '@/components/Navigation';
+import { Link } from 'react-router-dom';
+
+interface Lesson {
+  id: string;
+  title: string;
+  duration: string;
+  category: string;
+  description: string;
+  completed: boolean;
+}
 
 const Learn = () => {
-  const lessons = [
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [completedLessons, setCompletedLessons] = useState<string[]>([]);
+
+  const lessons: Lesson[] = [
     {
-      id: 1,
+      id: '1',
       title: 'Introduction to Mindfulness',
       duration: '5 min',
-      description: 'Learn the fundamentals of mindful awareness and present-moment attention',
-      completed: true
+      category: 'basics',
+      description: 'Learn the fundamentals of mindfulness and how it can transform your daily life.',
+      completed: false
     },
     {
-      id: 2,
+      id: '2',
       title: 'Breathing Techniques',
       duration: '5 min',
-      description: 'Master basic breathing patterns that form the foundation of meditation',
-      completed: true
+      category: 'breathing',
+      description: 'Master the art of conscious breathing for relaxation and focus.',
+      completed: false
     },
     {
-      id: 3,
+      id: '3',
       title: 'Body Scan Meditation',
       duration: '5 min',
-      description: 'Develop awareness of physical sensations and learn to relax deeply',
+      category: 'meditation',
+      description: 'Learn to connect with your body through progressive awareness.',
       completed: false
     },
     {
-      id: 4,
-      title: 'Loving-Kindness Practice',
+      id: '4',
+      title: 'Managing Stress',
       duration: '5 min',
-      description: 'Cultivate compassion and positive emotions toward yourself and others',
+      category: 'wellness',
+      description: 'Practical techniques for reducing stress in everyday situations.',
       completed: false
     },
     {
-      id: 5,
-      title: 'Dealing with Difficult Emotions',
+      id: '5',
+      title: 'Loving-Kindness Meditation',
       duration: '5 min',
-      description: 'Learn healthy ways to observe and work with challenging feelings',
+      category: 'meditation',
+      description: 'Cultivate compassion and positive emotions through this ancient practice.',
       completed: false
     },
     {
-      id: 6,
-      title: 'Walking Meditation',
+      id: '6',
+      title: 'Mindful Walking',
       duration: '5 min',
-      description: 'Bring mindfulness into movement and daily activities',
+      category: 'movement',
+      description: 'Transform your daily walks into mindful movement practices.',
       completed: false
     }
   ];
 
+  const categories = [
+    { id: 'all', name: 'All Lessons' },
+    { id: 'basics', name: 'Basics' },
+    { id: 'breathing', name: 'Breathing' },
+    { id: 'meditation', name: 'Meditation' },
+    { id: 'wellness', name: 'Wellness' },
+    { id: 'movement', name: 'Movement' }
+  ];
+
+  const filteredLessons = selectedCategory === 'all' 
+    ? lessons 
+    : lessons.filter(lesson => lesson.category === selectedCategory);
+
+  const completedCount = completedLessons.length;
+  const totalLessons = lessons.length;
+  const progressPercentage = (completedCount / totalLessons) * 100;
+
+  const markLessonComplete = (lessonId: string) => {
+    if (!completedLessons.includes(lessonId)) {
+      setCompletedLessons([...completedLessons, lessonId]);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 relative overflow-hidden">
-      {/* Animated Background Elements */}
+    <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-900 relative overflow-hidden">
+      {/* Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-400/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-400/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-400/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
       <Navigation />
 
-      {/* Main Content */}
       <div className="relative z-10 min-h-screen p-6 pt-24">
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-5xl md:text-6xl font-thin text-white mb-4 tracking-wide">
             Learn
           </h1>
-          <p className="text-xl text-purple-200 font-light">
-            Master meditation one lesson at a time
+          <p className="text-xl text-emerald-200 font-light">
+            5-minute lessons for mindful living
           </p>
         </div>
 
-        {/* Lessons Grid */}
-        <div className="max-w-4xl mx-auto">
-          <div className="grid gap-6">
-            {lessons.map((lesson) => (
-              <div
-                key={lesson.id}
-                className="group relative overflow-hidden rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 p-6 hover:bg-white/20 transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+        <div className="max-w-6xl mx-auto">
+          {/* Progress Section */}
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-light text-white">Your Progress</h2>
+              <span className="text-emerald-200">{completedCount}/{totalLessons} lessons completed</span>
+            </div>
+            <div className="w-full bg-white/10 rounded-full h-3">
+              <div 
+                className="bg-gradient-to-r from-emerald-400 to-teal-400 h-3 rounded-full transition-all duration-500"
+                style={{ width: `${progressPercentage}%` }}
+              ></div>
+            </div>
+          </div>
+
+          {/* Categories */}
+          <div className="flex flex-wrap gap-3 mb-8 justify-center">
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={`px-6 py-2 rounded-full transition-all duration-300 ${
+                  selectedCategory === category.id
+                    ? 'bg-gradient-to-r from-emerald-400 to-teal-400 text-emerald-900'
+                    : 'bg-white/10 text-white hover:bg-white/20'
+                }`}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-4 flex-1">
-                    <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-400/25 flex-shrink-0">
-                      <Book size={24} className="text-purple-900" />
+                {category.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Lessons Grid */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredLessons.map((lesson) => {
+              const isCompleted = completedLessons.includes(lesson.id);
+              
+              return (
+                <div
+                  key={lesson.id}
+                  className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 group"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center space-x-2">
+                      <BookOpen size={20} className="text-emerald-300" />
+                      <span className="text-emerald-200 text-sm flex items-center">
+                        <Clock size={14} className="mr-1" />
+                        {lesson.duration}
+                      </span>
                     </div>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-xl font-light text-white">
-                          {lesson.title}
-                        </h3>
-                        {lesson.completed && (
-                          <CheckCircle size={20} className="text-green-400" />
-                        )}
-                      </div>
-                      
-                      <p className="text-purple-200 leading-relaxed mb-3">
-                        {lesson.description}
-                      </p>
-                      
-                      <div className="flex items-center space-x-2 text-purple-300">
-                        <Clock size={16} />
-                        <span className="text-sm">{lesson.duration}</span>
-                      </div>
-                    </div>
+                    {isCompleted && (
+                      <CheckCircle size={20} className="text-emerald-400" />
+                    )}
                   </div>
                   
-                  <div className="text-right">
-                    <span className="text-2xl font-light text-purple-300">
-                      {lesson.id}
-                    </span>
-                  </div>
+                  <h3 className="text-xl font-medium text-white mb-3">
+                    {lesson.title}
+                  </h3>
+                  
+                  <p className="text-emerald-100 text-sm mb-6 leading-relaxed">
+                    {lesson.description}
+                  </p>
+                  
+                  <button
+                    onClick={() => markLessonComplete(lesson.id)}
+                    disabled={isCompleted}
+                    className={`w-full py-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
+                      isCompleted
+                        ? 'bg-emerald-600 text-white cursor-not-allowed'
+                        : 'bg-gradient-to-r from-emerald-400 to-teal-400 text-emerald-900 hover:scale-105'
+                    }`}
+                  >
+                    {isCompleted ? (
+                      <>
+                        <CheckCircle size={16} />
+                        <span>Completed</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play size={16} />
+                        <span>Start Lesson</span>
+                      </>
+                    )}
+                  </button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
