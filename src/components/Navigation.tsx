@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Home } from 'lucide-react';
@@ -22,11 +23,18 @@ const Navigation = () => {
   };
 
   const handleBackClick = () => {
+    console.log('Back button clicked!');
+    console.log('Current pathname:', location.pathname);
+    console.log('Is home page:', isHomePage);
+    
     if (isHomePage) {
+      console.log('On home page, not navigating');
       return;
     }
     
     const parentRoute = getParentRoute(location.pathname);
+    console.log('Calculated parent route:', parentRoute);
+    console.log('Navigating to:', parentRoute);
     navigate(parentRoute);
   };
 
