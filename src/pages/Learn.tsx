@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, Clock, CheckCircle, Play } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import { Link } from 'react-router-dom';
@@ -16,6 +16,14 @@ interface Lesson {
 const Learn = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Load completed lessons from localStorage
+    const saved = localStorage.getItem('completedLessons');
+    if (saved) {
+      setCompletedLessons(JSON.parse(saved));
+    }
+  }, []);
 
   const lessons: Lesson[] = [
     {
@@ -85,11 +93,6 @@ const Learn = () => {
   const totalLessons = lessons.length;
   const progressPercentage = (completedCount / totalLessons) * 100;
 
-  const markLessonComplete = (lessonId: string) => {
-    if (!completedLessons.includes(lessonId)) {
-      setCompletedLessons([...completedLessons, lessonId]);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-900 relative overflow-hidden">
@@ -175,19 +178,18 @@ const Learn = () => {
                     {lesson.description}
                   </p>
                   
-                  <button
-                    onClick={() => markLessonComplete(lesson.id)}
-                    disabled={isCompleted}
+                  <Link
+                    to={`/learn/lesson/${lesson.id}`}
                     className={`w-full py-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
                       isCompleted
-                        ? 'bg-emerald-600 text-white cursor-not-allowed'
+                        ? 'bg-emerald-600 text-white'
                         : 'bg-gradient-to-r from-emerald-400 to-teal-400 text-emerald-900 hover:scale-105'
                     }`}
                   >
                     {isCompleted ? (
                       <>
                         <CheckCircle size={16} />
-                        <span>Completed</span>
+                        <span>Review Lesson</span>
                       </>
                     ) : (
                       <>
@@ -195,7 +197,7 @@ const Learn = () => {
                         <span>Start Lesson</span>
                       </>
                     )}
-                  </button>
+                  </Link>
                 </div>
               );
             })}

@@ -8,6 +8,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import Index from "./pages/Index";
 import Meditate from "./pages/Meditate";
 import Learn from "./pages/Learn";
+import LessonDetail from "./pages/LessonDetail";
 import Reflect from "./pages/Reflect";
 import SilentMeditation from "./pages/SilentMeditation";
 import TraditionalMeditation from "./pages/TraditionalMeditation";
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/meditate/sounds" element={<WaveFrequencySounds />} />
             <Route path="/meditate/breathwork" element={<BreathWork />} />
             <Route path="/learn" element={<Learn />} />
+            <Route path="/learn/lesson/:id" element={<LessonDetail />} />
             <Route path="/reflect" element={<Reflect />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
