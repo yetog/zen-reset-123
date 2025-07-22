@@ -1,47 +1,50 @@
 
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Play, Brain, Star, Moon, Lightbulb, Heart } from 'lucide-react';
+import React, { useState } from 'react';
+import { Brain, Star, Moon, Lightbulb, Heart } from 'lucide-react';
 import Navigation from '@/components/Navigation';
+import ComingSoonModal from '@/components/ComingSoonModal';
 
 const GuidedMeditationTypes = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedFeature, setSelectedFeature] = useState('');
+
   const meditationTypes = [
     {
       title: 'Traditional',
       description: 'Classic guided meditation sessions with expert instructors',
       icon: Heart,
-      path: '/meditate/guided/traditional',
       gradient: 'from-purple-600 to-purple-800'
     },
     {
       title: 'Training & Mindfulness',
       description: 'Structured sessions to develop mindfulness skills',
       icon: Brain,
-      path: '/meditate/guided/training',
       gradient: 'from-indigo-600 to-purple-700'
     },
     {
       title: 'Cosmic',
       description: 'Connect with the universe and explore cosmic consciousness',
       icon: Star,
-      path: '/meditate/guided/cosmic',
       gradient: 'from-purple-700 to-indigo-600'
     },
     {
       title: 'Lucid Dreaming',
       description: 'Guided sessions to enhance dream awareness and control',
       icon: Moon,
-      path: '/meditate/guided/lucid',
       gradient: 'from-indigo-700 to-purple-600'
     },
     {
       title: 'Next Level Thinking',
       description: 'Advanced meditation for enhanced cognitive abilities',
       icon: Lightbulb,
-      path: '/meditate/guided/nextlevel',
       gradient: 'from-purple-800 to-indigo-700'
     }
   ];
+
+  const handleMeditationTypeClick = (title: string) => {
+    setSelectedFeature(title);
+    setIsModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 relative overflow-hidden">
@@ -70,10 +73,10 @@ const GuidedMeditationTypes = () => {
           {meditationTypes.map((type) => {
             const IconComponent = type.icon;
             return (
-              <Link
+              <button
                 key={type.title}
-                to={type.path}
-                className="group relative overflow-hidden rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 p-6 hover:bg-white/20 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/25"
+                onClick={() => handleMeditationTypeClick(type.title)}
+                className="group relative overflow-hidden rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 p-6 hover:bg-white/20 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/25 text-left"
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${type.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
                 
@@ -86,14 +89,24 @@ const GuidedMeditationTypes = () => {
                     {type.title}
                   </h2>
                   
-                  <p className="text-purple-200 text-sm leading-relaxed">
+                  <p className="text-purple-200 text-sm leading-relaxed mb-4">
                     {type.description}
                   </p>
+
+                  <div className="inline-flex items-center px-3 py-1 bg-yellow-400/20 text-yellow-300 text-xs font-light rounded-full border border-yellow-400/30">
+                    Coming Soon
+                  </div>
                 </div>
-              </Link>
+              </button>
             );
           })}
         </div>
+
+        <ComingSoonModal 
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          feature={selectedFeature}
+        />
       </div>
     </div>
   );

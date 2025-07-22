@@ -12,6 +12,10 @@ import LessonDetail from "./pages/LessonDetail";
 import Reflect from "./pages/Reflect";
 import SilentMeditation from "./pages/SilentMeditation";
 import TraditionalMeditation from "./pages/TraditionalMeditation";
+import TrainingMeditation from "./pages/TrainingMeditation";
+import CosmicMeditation from "./pages/CosmicMeditation";
+import LucidDreamingMeditation from "./pages/LucidDreamingMeditation";
+import NextLevelMeditation from "./pages/NextLevelMeditation";
 import WaveFrequencySounds from "./pages/WaveFrequencySounds";
 import BreathWork from "./pages/BreathWork";
 import NotFound from "./pages/NotFound";
@@ -38,6 +42,10 @@ const App = () => (
             <Route path="/meditate" element={<Meditate />} />
             <Route path="/meditate/guided" element={<GuidedMeditationTypes />} />
             <Route path="/meditate/guided/traditional" element={<TraditionalMeditation />} />
+            <Route path="/meditate/guided/training" element={<TrainingMeditation />} />
+            <Route path="/meditate/guided/cosmic" element={<CosmicMeditation />} />
+            <Route path="/meditate/guided/lucid" element={<LucidDreamingMeditation />} />
+            <Route path="/meditate/guided/nextlevel" element={<NextLevelMeditation />} />
             <Route path="/meditate/silent" element={<SilentMeditation />} />
             <Route path="/meditate/sounds" element={<WaveFrequencySounds />} />
             <Route path="/meditate/breathwork" element={<BreathWork />} />

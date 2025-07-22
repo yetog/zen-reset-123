@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX, Waves } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import { toast } from 'sonner';
@@ -7,53 +7,138 @@ import { toast } from 'sonner';
 const WaveFrequencySounds = () => {
   const [activeSound, setActiveSound] = useState<number | null>(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [loadingStates, setLoadingStates] = useState<boolean[]>(new Array(6).fill(false));
+  const audioRefs = useRef<(HTMLAudioElement | null)[]>(new Array(6).fill(null));
 
   const frequencySounds = [
     {
       name: 'Theta Waves',
       frequency: '4-8 Hz',
       description: 'Deep meditation and creativity',
-      color: 'from-blue-500 to-indigo-600'
+      color: 'from-blue-500 to-indigo-600',
+      audioUrl: 'https://meditations.s3.us-central-1.ionoscloud.com/Theta Waves (4-8 Hz) Deep meditation and creativity.mp3'
     },
     {
       name: 'Alpha Waves',
       frequency: '8-12 Hz',
       description: 'Relaxed awareness and calm focus',
-      color: 'from-green-500 to-teal-600'
+      color: 'from-green-500 to-teal-600',
+      audioUrl: 'https://meditations.s3.us-central-1.ionoscloud.com/Alpha Waves (8-12 Hz) Relaxed awareness and calm focus.mp3'
     },
     {
       name: 'Delta Waves',
       frequency: '0.5-4 Hz',
       description: 'Deep sleep and healing',
-      color: 'from-purple-500 to-violet-600'
+      color: 'from-purple-500 to-violet-600',
+      audioUrl: 'https://meditations.s3.us-central-1.ionoscloud.com/Delta Waves (0.5-4 Hz) Deep sleep and healing.mp3'
     },
     {
       name: 'Gamma Waves',
       frequency: '30-100 Hz',
       description: 'Enhanced consciousness and insight',
-      color: 'from-orange-500 to-red-600'
+      color: 'from-orange-500 to-red-600',
+      audioUrl: 'https://meditations.s3.us-central-1.ionoscloud.com/Gamma Waves (30-100 Hz) Enhanced consciousness and insight.mp3'
     },
     {
       name: 'Schumann Resonance',
       frequency: '7.83 Hz',
       description: 'Earth\'s natural frequency for grounding',
-      color: 'from-emerald-500 to-green-600'
+      color: 'from-emerald-500 to-green-600',
+      audioUrl: 'https://meditations.s3.us-central-1.ionoscloud.com/Earth Meditation - 7.83 Hz Binaural Beats - Schumann Resonance - Meditation Music.mp3'
     },
     {
       name: '528 Hz Love',
       frequency: '528 Hz',
       description: 'DNA repair and transformation',
-      color: 'from-pink-500 to-rose-600'
+      color: 'from-pink-500 to-rose-600',
+      audioUrl: 'https://meditations.s3.us-central-1.ionoscloud.com/528 Hz Love.mp3'
     }
   ];
 
+  useEffect(() => {
+    // Initialize audio elements
+    frequencySounds.forEach((sound, index) => {
+      if (!audioRefs.current[index]) {
+        const audio = new Audio(sound.audioUrl);
+        audio.preload = 'metadata';
+        
+        audio.addEventListener('loadstart', () => {
+          setLoadingStates(prev => {
+            const newStates = [...prev];
+            newStates[index] = true;
+            return newStates;
+          });
+        });
+        
+        audio.addEventListener('canplay', () => {
+          setLoadingStates(prev => {
+            const newStates = [...prev];
+            newStates[index] = false;
+            return newStates;
+          });
+        });
+        
+        audio.addEventListener('ended', () => {
+          setActiveSound(null);
+        });
+        
+        audio.addEventListener('error', () => {
+          setLoadingStates(prev => {
+            const newStates = [...prev];
+            newStates[index] = false;
+            return newStates;
+          });
+          toast.error(`Failed to load ${sound.name}`);
+        });
+        
+        audioRefs.current[index] = audio;
+      }
+    });
+
+    // Cleanup
+    return () => {
+      audioRefs.current.forEach(audio => {
+        if (audio) {
+          audio.pause();
+          audio.src = '';
+        }
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    // Handle mute state
+    audioRefs.current.forEach(audio => {
+      if (audio) {
+        audio.muted = isMuted;
+      }
+    });
+  }, [isMuted]);
+
   const handleSoundToggle = (index: number) => {
+    const audio = audioRefs.current[index];
+    if (!audio) return;
+
     if (activeSound === index) {
+      // Pause current sound
+      audio.pause();
       setActiveSound(null);
       toast.success('Sound stopped');
     } else {
-      setActiveSound(index);
-      toast.success(`Playing ${frequencySounds[index].name}`);
+      // Stop any currently playing sound
+      if (activeSound !== null && audioRefs.current[activeSound]) {
+        audioRefs.current[activeSound]!.pause();
+        audioRefs.current[activeSound]!.currentTime = 0;
+      }
+      
+      // Start new sound
+      audio.currentTime = 0;
+      audio.play().then(() => {
+        setActiveSound(index);
+        toast.success(`Playing ${frequencySounds[index].name}`);
+      }).catch(() => {
+        toast.error(`Failed to play ${frequencySounds[index].name}`);
+      });
     }
   };
 
@@ -117,13 +202,20 @@ const WaveFrequencySounds = () => {
                 
                 <button
                   onClick={() => handleSoundToggle(index)}
+                  disabled={loadingStates[index]}
                   className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
                     activeSound === index
                       ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-purple-900 shadow-lg shadow-yellow-400/25'
                       : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
+                  } ${loadingStates[index] ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  {activeSound === index ? <Pause size={20} /> : <Play size={20} />}
+                  {loadingStates[index] ? (
+                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  ) : activeSound === index ? (
+                    <Pause size={20} />
+                  ) : (
+                    <Play size={20} />
+                  )}
                 </button>
               </div>
             </div>

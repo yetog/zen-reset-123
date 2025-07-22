@@ -1,9 +1,17 @@
+
 import React from 'react';
-import { Heart, Clock, Sparkles } from 'lucide-react';
+import { Clock, Sparkles, LucideIcon } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import { Link } from 'react-router-dom';
 
-const TraditionalMeditation = () => {
+interface ComingSoonMeditationProps {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  features: string[];
+}
+
+const ComingSoonMeditation = ({ title, description, icon: IconComponent, features }: ComingSoonMeditationProps) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 relative overflow-hidden">
       {/* Animated Background Elements */}
@@ -19,13 +27,13 @@ const TraditionalMeditation = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-3xl flex items-center justify-center shadow-lg shadow-yellow-400/25">
-            <Heart size={40} className="text-purple-900" />
+            <IconComponent size={40} className="text-purple-900" />
           </div>
           <h1 className="text-4xl md:text-5xl font-thin text-white mb-4 tracking-wide">
-            Traditional Meditation
+            {title}
           </h1>
           <p className="text-xl text-purple-200 font-light mb-8">
-            Classic guided meditation sessions with expert instructors
+            {description}
           </p>
         </div>
 
@@ -44,23 +52,17 @@ const TraditionalMeditation = () => {
           </div>
           
           <p className="text-purple-200 text-lg leading-relaxed mb-8">
-            We're carefully crafting beautiful guided meditation experiences with expert instructors. 
-            These traditional sessions will help you develop deeper mindfulness and inner peace.
+            We're developing an amazing {title.toLowerCase()} experience that will transform your meditation practice.
+            Stay tuned for something truly special.
           </p>
           
           <div className="space-y-4 text-purple-300">
-            <p className="flex items-center justify-center space-x-2">
-              <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
-              <span>Expert-led guided sessions</span>
-            </p>
-            <p className="flex items-center justify-center space-x-2">
-              <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
-              <span>Multiple duration options</span>
-            </p>
-            <p className="flex items-center justify-center space-x-2">
-              <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
-              <span>Progressive difficulty levels</span>
-            </p>
+            {features.map((feature, index) => (
+              <p key={index} className="flex items-center justify-center space-x-2">
+                <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                <span>{feature}</span>
+              </p>
+            ))}
           </div>
           
           <div className="mt-10">
@@ -77,4 +79,4 @@ const TraditionalMeditation = () => {
   );
 };
 
-export default TraditionalMeditation;
+export default ComingSoonMeditation;
