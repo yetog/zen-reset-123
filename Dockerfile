@@ -15,6 +15,7 @@ RUN npm ci
 COPY . .
 
 # Build the application
+ENV BASE_PATH=/zen-reset/
 RUN npm run build
 
 # Production stage
