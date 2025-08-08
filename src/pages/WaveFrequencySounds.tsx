@@ -9,6 +9,25 @@ const WaveFrequencySounds = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [loadingStates, setLoadingStates] = useState<boolean[]>(new Array(6).fill(false));
   const audioRefs = useRef<(HTMLAudioElement | null)[]>(new Array(6).fill(null));
+  const audioUnlockRef = useRef(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const unlockAudio = () => {
+    if (audioUnlockRef.current) return;
+    const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (Ctx) {
+      try {
+        const ctx = new Ctx();
+        audioCtxRef.current = ctx;
+        if (ctx.state === 'suspended') {
+          ctx.resume().catch(() => {});
+        }
+      } catch (e) {
+        // ignore errors
+      }
+    }
+    audioUnlockRef.current = true;
+  };
+
 
   const frequencySounds = [
     {
@@ -59,25 +78,18 @@ const WaveFrequencySounds = () => {
     // Initialize audio elements
     frequencySounds.forEach((sound, index) => {
       if (!audioRefs.current[index]) {
-        const audio = new Audio(sound.audioUrl);
-        audio.preload = 'metadata';
+        const audio = new Audio(encodeURI(sound.audioUrl));
+        audio.preload = 'none';
+        audio.crossOrigin = 'anonymous';
         
-        audio.addEventListener('loadstart', () => {
-          setLoadingStates(prev => {
-            const newStates = [...prev];
-            newStates[index] = true;
-            return newStates;
-          });
-        });
-        
-        audio.addEventListener('canplay', () => {
+        audio.addEventListener('playing', () => {
           setLoadingStates(prev => {
             const newStates = [...prev];
             newStates[index] = false;
             return newStates;
           });
         });
-        
+
         audio.addEventListener('ended', () => {
           setActiveSound(null);
         });
@@ -119,25 +131,52 @@ const WaveFrequencySounds = () => {
     const audio = audioRefs.current[index];
     if (!audio) return;
 
+    // Try to unlock audio on iOS/Safari on first user gesture
+    unlockAudio();
+
     if (activeSound === index) {
       // Pause current sound
       audio.pause();
       setActiveSound(null);
+      setLoadingStates(prev => {
+        const s = [...prev];
+        s[index] = false;
+        return s;
+      });
       toast.success('Sound stopped');
     } else {
       // Stop any currently playing sound
       if (activeSound !== null && audioRefs.current[activeSound]) {
         audioRefs.current[activeSound]!.pause();
         audioRefs.current[activeSound]!.currentTime = 0;
+        setLoadingStates(prev => {
+          const s = [...prev];
+          if (activeSound !== null) s[activeSound] = false;
+          return s;
+        });
       }
       
       // Start new sound
       audio.currentTime = 0;
+      audio.muted = isMuted;
+
+      setLoadingStates(prev => {
+        const s = [...prev];
+        s[index] = true;
+        return s;
+      });
+
       audio.play().then(() => {
         setActiveSound(index);
         toast.success(`Playing ${frequencySounds[index].name}`);
-      }).catch(() => {
+      }).catch((err) => {
+        setLoadingStates(prev => {
+          const s = [...prev];
+          s[index] = false;
+          return s;
+        });
         toast.error(`Failed to play ${frequencySounds[index].name}`);
+        console.error('Audio play failed', err);
       });
     }
   };
@@ -202,12 +241,13 @@ const WaveFrequencySounds = () => {
                 
                 <button
                   onClick={() => handleSoundToggle(index)}
-                  disabled={loadingStates[index]}
                   className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
                     activeSound === index
                       ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-purple-900 shadow-lg shadow-yellow-400/25'
                       : 'bg-white/10 text-white hover:bg-white/20'
-                  } ${loadingStates[index] ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  }`}
+                  aria-busy={loadingStates[index] ? 'true' : 'false'}
+                  aria-live="polite"
                 >
                   {loadingStates[index] ? (
                     <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
