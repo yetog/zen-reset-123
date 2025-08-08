@@ -90,33 +90,62 @@ Deploy with:
 docker-compose up -d
 ```
 
-## 🌐 Portfolio Integration
+## 🌐 Portfolio Integration (Path under /zen-reset/)
 
-### Option 1: Subdomain (Recommended)
-```nginx
-server {
-    listen 80;
-    server_name meditation.yourdomain.com;
-    
-    location / {
-        proxy_pass http://localhost:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
+### Option B: Docker container + NGINX reverse proxy at /zen-reset/
+This keeps your portfolio at `/` and mounts this app under `/zen-reset/`.
+
+1) Build and run the container (choose any free host port, e.g., 8080):
+```bash
+docker build -t zen-reset .
+docker run -d --name zen_reset -p 8080:80 zen-reset
 ```
 
-### Option 2: Path-based
+2) On your main NGINX (fronting the portfolio), add a path-based reverse proxy that STRIPS the `/zen-reset` prefix before forwarding to the container:
 ```nginx
-location /meditation {
-    proxy_pass http://localhost:8080;
+# HTTP -> HTTPS redirect (if applicable)
+server {
+  listen 80;
+  server_name yourdomain.com www.yourdomain.com;
+  return 301 https://$host$request_uri;
+}
+
+server {
+  listen 443 ssl;
+  server_name yourdomain.com www.yourdomain.com;
+
+  # ... your SSL config and main site root/index ...
+
+  # Path-mounted app
+  location /zen-reset/ {
+    # Forward to the Docker container
+    proxy_pass http://127.0.0.1:8080;    # container host:port
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
+    proxy_redirect off;
+
+    # Strip the prefix so the container receives "/assets/...", "/index.html", etc.
+    rewrite ^/zen-reset/(.*)$ /$1 break;
+  }
 }
 ```
 
-### Option 3: Direct Link
-Simply link to `http://yourdomain.com:8080` from your portfolio.
+Why strip? The app is built with `base: "/zen-reset/"`, so the HTML references `/zen-reset/assets/...`. By stripping the prefix, the container serves those as `/assets/...` correctly.
+
+3) Link from your portfolio
+Use a normal hyperlink anywhere in your portfolio:
+```html
+<a href="/zen-reset/" rel="noopener">Zen Reset</a>
+```
+
+4) Health checks
+```bash
+curl -I https://yourdomain.com/zen-reset/
+```
+You should see `200 OK`. If you get 404s for assets, double-check the Vite `base` and the NGINX `rewrite` rule.
+
+> Note: For local development the app runs at `/` so the Vite dev preview works. In production builds and the Docker image it uses `/zen-reset/` automatically.
+
 
 ## 📁 Project Structure
 
