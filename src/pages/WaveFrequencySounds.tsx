@@ -35,42 +35,42 @@ const WaveFrequencySounds = () => {
       frequency: '4-8 Hz',
       description: 'Deep meditation and creativity',
       color: 'from-blue-500 to-indigo-600',
-      audioUrl: 'https://meditations.s3.us-central-1.ionoscloud.com/Theta Waves (4-8 Hz) Deep meditation and creativity.mp3'
+      audioUrl: '/zen-reset/audio/Theta Waves (4-8 Hz) Deep meditation and creativity.mp3'
     },
     {
       name: 'Alpha Waves',
       frequency: '8-12 Hz',
       description: 'Relaxed awareness and calm focus',
       color: 'from-green-500 to-teal-600',
-      audioUrl: 'https://meditations.s3.us-central-1.ionoscloud.com/Alpha Waves (8-12 Hz) Relaxed awareness and calm focus.mp3'
+      audioUrl: '/zen-reset/audio/Alpha Waves (8-12 Hz) Relaxed awareness and calm focus.mp3'
     },
     {
       name: 'Delta Waves',
       frequency: '0.5-4 Hz',
       description: 'Deep sleep and healing',
       color: 'from-purple-500 to-violet-600',
-      audioUrl: 'https://meditations.s3.us-central-1.ionoscloud.com/Delta Waves (0.5-4 Hz) Deep sleep and healing.mp3'
+      audioUrl: '/zen-reset/audio/Delta Waves (0.5-4 Hz) Deep sleep and healing.mp3'
     },
     {
       name: 'Gamma Waves',
       frequency: '30-100 Hz',
       description: 'Enhanced consciousness and insight',
       color: 'from-orange-500 to-red-600',
-      audioUrl: 'https://meditations.s3.us-central-1.ionoscloud.com/Gamma Waves (30-100 Hz) Enhanced consciousness and insight.mp3'
+      audioUrl: '/zen-reset/audio/Gamma Waves (30-100 Hz) Enhanced consciousness and insight.mp3'
     },
     {
       name: 'Schumann Resonance',
       frequency: '7.83 Hz',
       description: 'Earth\'s natural frequency for grounding',
       color: 'from-emerald-500 to-green-600',
-      audioUrl: 'https://meditations.s3.us-central-1.ionoscloud.com/Earth Meditation - 7.83 Hz Binaural Beats - Schumann Resonance - Meditation Music.mp3'
+      audioUrl: '/zen-reset/audio/Earth Meditation - 7.83 Hz Binaural Beats - Schumann Resonance - Meditation Music.mp3'
     },
     {
       name: '528 Hz Love',
       frequency: '528 Hz',
       description: 'DNA repair and transformation',
       color: 'from-pink-500 to-rose-600',
-      audioUrl: 'https://meditations.s3.us-central-1.ionoscloud.com/528 Hz Love.mp3'
+      audioUrl: '/zen-reset/audio/528 Hz Love.mp3'
     }
   ];
 
@@ -78,9 +78,8 @@ const WaveFrequencySounds = () => {
     // Initialize audio elements
     frequencySounds.forEach((sound, index) => {
       if (!audioRefs.current[index]) {
-        const audio = new Audio(encodeURI(sound.audioUrl));
+        const audio = new Audio(sound.audioUrl);
         audio.preload = 'none';
-        audio.crossOrigin = 'anonymous';
         
         audio.addEventListener('playing', () => {
           setLoadingStates(prev => {
