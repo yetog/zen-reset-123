@@ -3,7 +3,12 @@ import React, { useState, useEffect } from 'react';
 import Navigation from '@/components/Navigation';
 import ReflectionWritingArea from '@/components/ReflectionWritingArea';
 import ReflectionSearch from '@/components/ReflectionSearch';
-import ReflectionHistory, { Reflection } from '@/components/ReflectionHistory';
+import ReflectionHistory, { Reflection as LegacyReflection } from '@/components/ReflectionHistory';
+import type { Reflection } from '@/services/storageService';
+import MobileStreakWidget from '@/components/MobileStreakWidget';
+import EnhancedReflectionWriting from '@/components/EnhancedReflectionWriting';
+import { StorageService } from '@/services/storageService';
+import { useMobile } from '@/hooks/useMobile';
 import { toast } from 'sonner';
 
 const Reflect = () => {
@@ -12,21 +17,47 @@ const Reflect = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [isSaving, setIsSaving] = useState(false);
+  const isMobile = useMobile();
 
-  // Load reflections from localStorage on component mount
+  // Load reflections from storage on component mount
   useEffect(() => {
-    const savedReflections = localStorage.getItem('reflections');
-    if (savedReflections) {
-      setReflections(JSON.parse(savedReflections));
-    }
+    loadReflections();
   }, []);
 
-  // Save reflections to localStorage whenever reflections change
-  useEffect(() => {
-    localStorage.setItem('reflections', JSON.stringify(reflections));
-  }, [reflections]);
+  const loadReflections = async () => {
+    try {
+      const savedReflections = await StorageService.getReflections();
+      setReflections(savedReflections);
+    } catch (error) {
+      console.error('Error loading reflections:', error);
+      // Fallback to localStorage for backward compatibility
+      const savedReflections = localStorage.getItem('reflections');
+      if (savedReflections) {
+        setReflections(JSON.parse(savedReflections));
+      }
+    }
+  };
 
-  const handleSaveReflection = () => {
+  const handleSaveReflection = (reflection?: Reflection | LegacyReflection) => {
+    if (reflection) {
+      // Enhanced reflection from mobile component - ensure it has all required fields
+      const normalizedReflection: Reflection = {
+        id: reflection.id,
+        content: reflection.content,
+        date: reflection.date,
+        time: reflection.time || new Date().toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }),
+        createdAt: 'createdAt' in reflection ? reflection.createdAt : Date.now(),
+        mood: 'mood' in reflection ? reflection.mood : undefined,
+        tags: 'tags' in reflection ? reflection.tags : undefined,
+      };
+      setReflections(prev => [normalizedReflection, ...prev.filter(r => r.id !== normalizedReflection.id)]);
+      return;
+    }
+
+    // Legacy reflection saving
     if (!currentReflection.trim()) return;
 
     setIsSaving(true);
@@ -40,7 +71,8 @@ const Reflect = () => {
         time: new Date().toLocaleTimeString('en-US', { 
           hour: '2-digit', 
           minute: '2-digit' 
-        })
+        }),
+        createdAt: Date.now(),
       };
 
       setReflections(prev => [newReflection, ...prev]);
@@ -104,7 +136,7 @@ const Reflect = () => {
 
       <Navigation />
 
-      <div className="relative z-10 min-h-screen p-6 pt-24">
+      <div className="relative z-10 min-h-screen p-6 pt-24 pb-24 md:pb-6">
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-thin text-white mb-4 tracking-wide">
@@ -117,13 +149,20 @@ const Reflect = () => {
 
         {/* Main Content */}
         <div className="max-w-4xl mx-auto">
-          {/* Writing Area */}
-          <ReflectionWritingArea
-            currentReflection={currentReflection}
-            onReflectionChange={setCurrentReflection}
-            onSave={handleSaveReflection}
-            isSaving={isSaving}
-          />
+          {/* Mobile Streak Widget */}
+          {isMobile && <MobileStreakWidget />}
+          
+          {/* Writing Area - Use enhanced version on mobile */}
+          {isMobile ? (
+            <EnhancedReflectionWriting onSave={handleSaveReflection} />
+          ) : (
+            <ReflectionWritingArea
+              currentReflection={currentReflection}
+              onReflectionChange={setCurrentReflection}
+              onSave={handleSaveReflection}
+              isSaving={isSaving}
+            />
+          )}
 
           {/* Search and Filter */}
           <ReflectionSearch
@@ -135,7 +174,13 @@ const Reflect = () => {
 
           {/* Reflections History */}
           <ReflectionHistory
-            reflections={filterReflections()}
+            reflections={filterReflections().map(r => ({
+              ...r,
+              time: r.time || new Date(r.createdAt || Date.now()).toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })
+            }))}
             onDelete={handleDeleteReflection}
           />
         </div>

@@ -45,7 +45,7 @@ const Index = () => {
           </div>
 
           {/* Navigation Cards */}
-          <div className="flex flex-col sm:flex-row gap-6 sm:gap-12 max-w-2xl w-full justify-center">
+          <div className="flex flex-col sm:flex-row gap-6 sm:gap-12 max-w-2xl w-full justify-center mb-24 md:mb-0">
             {navigationCards.map((card, index) => {
               const IconComponent = card.icon;
               return (
