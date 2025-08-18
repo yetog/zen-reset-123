@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Waves } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Waves, Unlock } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import { toast } from 'sonner';
 
@@ -8,7 +8,10 @@ const WaveFrequencySounds = () => {
   const [activeSound, setActiveSound] = useState<number | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [loadingStates, setLoadingStates] = useState<boolean[]>(new Array(6).fill(false));
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [showUnlockButton, setShowUnlockButton] = useState(true);
   const audioRefs = useRef<(HTMLAudioElement | null)[]>(new Array(6).fill(null));
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const frequencySounds = [
     {
@@ -56,11 +59,35 @@ const WaveFrequencySounds = () => {
   ];
 
   useEffect(() => {
-    // Initialize audio elements
+    // Check if audio was previously unlocked
+    const wasUnlocked = localStorage.getItem('audioUnlocked') === 'true';
+    if (wasUnlocked) {
+      setAudioUnlocked(true);
+      setShowUnlockButton(false);
+      initializeAudio();
+    }
+
+    // Cleanup
+    return () => {
+      audioRefs.current.forEach(audio => {
+        if (audio) {
+          audio.pause();
+          audio.src = '';
+        }
+      });
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
+  }, []);
+
+  const initializeAudio = () => {
+    // Initialize audio elements only after user interaction
     frequencySounds.forEach((sound, index) => {
       if (!audioRefs.current[index]) {
-        const audio = new Audio(sound.audioUrl);
-        audio.preload = 'metadata';
+        const audio = new Audio();
+        audio.preload = 'none'; // Don't preload until after user interaction
+        audio.crossOrigin = 'anonymous';
         
         audio.addEventListener('loadstart', () => {
           setLoadingStates(prev => {
@@ -82,29 +109,60 @@ const WaveFrequencySounds = () => {
           setActiveSound(null);
         });
         
-        audio.addEventListener('error', () => {
+        audio.addEventListener('error', (e) => {
           setLoadingStates(prev => {
             const newStates = [...prev];
             newStates[index] = false;
             return newStates;
           });
+          console.error('Audio error:', e);
           toast.error(`Failed to load ${sound.name}`);
         });
         
+        // Set source after all event listeners are attached
+        audio.src = sound.audioUrl;
         audioRefs.current[index] = audio;
       }
     });
+  };
 
-    // Cleanup
-    return () => {
-      audioRefs.current.forEach(audio => {
-        if (audio) {
-          audio.pause();
-          audio.src = '';
-        }
-      });
-    };
-  }, []);
+  const unlockAudio = async () => {
+    try {
+      // Create and play a silent audio to unlock the audio context
+      const audio = new Audio();
+      audio.volume = 0;
+      
+      // Try to create AudioContext if it doesn't exist
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      
+      // Resume audio context if it's suspended
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+      
+      // Play a silent audio to unlock
+      const playPromise = audio.play();
+      if (playPromise) {
+        await playPromise;
+        audio.pause();
+        audio.currentTime = 0;
+      }
+      
+      setAudioUnlocked(true);
+      setShowUnlockButton(false);
+      localStorage.setItem('audioUnlocked', 'true');
+      
+      // Initialize audio elements after unlock
+      initializeAudio();
+      
+      toast.success('Audio unlocked! You can now play sounds.');
+    } catch (error) {
+      console.error('Failed to unlock audio:', error);
+      toast.error('Failed to unlock audio. Please try again or check your browser settings.');
+    }
+  };
 
   useEffect(() => {
     // Handle mute state
@@ -115,13 +173,31 @@ const WaveFrequencySounds = () => {
     });
   }, [isMuted]);
 
-  const handleSoundToggle = (index: number) => {
+  const handleSoundToggle = async (index: number) => {
+    if (!audioUnlocked) {
+      toast.error('Please unlock audio first by clicking the "Start Audio" button.');
+      return;
+    }
+
     const audio = audioRefs.current[index];
     if (!audio) return;
 
     if (activeSound === index) {
-      // Pause current sound
-      audio.pause();
+      // Pause current sound with fade out
+      const fadeOut = () => {
+        const fadeInterval = setInterval(() => {
+          if (audio.volume > 0.1) {
+            audio.volume -= 0.1;
+          } else {
+            audio.volume = 0;
+            audio.pause();
+            audio.volume = 1; // Reset volume for next play
+            clearInterval(fadeInterval);
+          }
+        }, 50);
+      };
+      
+      fadeOut();
       setActiveSound(null);
       toast.success('Sound stopped');
     } else {
@@ -129,16 +205,47 @@ const WaveFrequencySounds = () => {
       if (activeSound !== null && audioRefs.current[activeSound]) {
         audioRefs.current[activeSound]!.pause();
         audioRefs.current[activeSound]!.currentTime = 0;
+        audioRefs.current[activeSound]!.volume = 1;
       }
       
       // Start new sound
       audio.currentTime = 0;
-      audio.play().then(() => {
-        setActiveSound(index);
-        toast.success(`Playing ${frequencySounds[index].name}`);
-      }).catch(() => {
-        toast.error(`Failed to play ${frequencySounds[index].name}`);
-      });
+      audio.volume = 0;
+      
+      try {
+        const playPromise = audio.play();
+        
+        if (playPromise) {
+          await playPromise;
+          
+          // Fade in
+          const fadeIn = () => {
+            const fadeInterval = setInterval(() => {
+              if (audio.volume < 0.9) {
+                audio.volume += 0.1;
+              } else {
+                audio.volume = 1;
+                clearInterval(fadeInterval);
+              }
+            }, 50);
+          };
+          
+          fadeIn();
+          setActiveSound(index);
+          toast.success(`Playing ${frequencySounds[index].name}`);
+        }
+      } catch (error: any) {
+        console.error('Playback error:', error);
+        
+        if (error.name === 'NotAllowedError') {
+          toast.error('Playback not allowed. Please interact with the page first.');
+          setAudioUnlocked(false);
+          setShowUnlockButton(true);
+          localStorage.removeItem('audioUnlocked');
+        } else {
+          toast.error(`Failed to play ${frequencySounds[index].name}. Try refreshing the page.`);
+        }
+      }
     }
   };
 
@@ -164,15 +271,38 @@ const WaveFrequencySounds = () => {
           </p>
         </div>
 
+        {/* Audio Unlock Button */}
+        {showUnlockButton && (
+          <div className="flex flex-col items-center mb-8">
+            <div className="bg-yellow-500/20 border border-yellow-400/50 rounded-lg p-4 mb-4 max-w-md text-center">
+              <p className="text-yellow-200 text-sm mb-2">
+                🔒 Audio is locked by your browser's autoplay policy
+              </p>
+              <p className="text-yellow-300 text-xs">
+                Click the button below to enable audio playback
+              </p>
+            </div>
+            <button
+              onClick={unlockAudio}
+              className="bg-gradient-to-r from-yellow-400 to-orange-400 text-purple-900 px-6 py-3 rounded-full font-medium flex items-center gap-2 hover:scale-105 transition-transform duration-300 shadow-lg shadow-yellow-400/25"
+            >
+              <Unlock size={20} />
+              Start Audio
+            </button>
+          </div>
+        )}
+
         {/* Global Controls */}
-        <div className="flex justify-center mb-8">
-          <button
-            onClick={() => setIsMuted(!isMuted)}
-            className="w-14 h-14 bg-white/10 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-all duration-300"
-          >
-            {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
-          </button>
-        </div>
+        {audioUnlocked && (
+          <div className="flex justify-center mb-8">
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className="w-14 h-14 bg-white/10 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-all duration-300"
+            >
+              {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+            </button>
+          </div>
+        )}
 
         {/* Frequency Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
@@ -202,12 +332,14 @@ const WaveFrequencySounds = () => {
                 
                 <button
                   onClick={() => handleSoundToggle(index)}
-                  disabled={loadingStates[index]}
+                  disabled={loadingStates[index] || !audioUnlocked}
                   className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
                     activeSound === index
                       ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-purple-900 shadow-lg shadow-yellow-400/25'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  } ${loadingStates[index] ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      : audioUnlocked 
+                        ? 'bg-white/10 text-white hover:bg-white/20'
+                        : 'bg-white/5 text-white/50 cursor-not-allowed'
+                  } ${(loadingStates[index] || !audioUnlocked) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {loadingStates[index] ? (
                     <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
@@ -227,6 +359,12 @@ const WaveFrequencySounds = () => {
           <p className="text-purple-300 text-sm font-light">
             Use headphones for the best frequency experience
           </p>
+          {audioUnlocked && (
+            <p className="text-green-400 text-xs mt-2 flex items-center justify-center gap-1">
+              <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+              Audio enabled
+            </p>
+          )}
         </div>
       </div>
     </div>
