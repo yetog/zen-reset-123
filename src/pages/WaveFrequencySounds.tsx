@@ -1,8 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Waves, Unlock } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Waves, Unlock, AlertCircle } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import { toast } from 'sonner';
+import { useMobile } from '@/hooks/useMobile';
 
 const WaveFrequencySounds = () => {
   const [activeSound, setActiveSound] = useState<number | null>(null);
@@ -10,8 +11,13 @@ const WaveFrequencySounds = () => {
   const [loadingStates, setLoadingStates] = useState<boolean[]>(new Array(6).fill(false));
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [showUnlockButton, setShowUnlockButton] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
+  const [audioContextState, setAudioContextState] = useState<string>('unknown');
+  const [networkStatus, setNetworkStatus] = useState<string>('unknown');
   const audioRefs = useRef<(HTMLAudioElement | null)[]>(new Array(6).fill(null));
   const audioContextRef = useRef<AudioContext | null>(null);
+  const loadTimeoutRefs = useRef<NodeJS.Timeout[]>([]);
+  const isMobile = useMobile();
 
   const frequencySounds = [
     {
@@ -58,10 +64,38 @@ const WaveFrequencySounds = () => {
     }
   ];
 
+  // Debug logging function
+  const addDebugLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const logMessage = `[${timestamp}] ${message}`;
+    console.log(logMessage);
+    setDebugInfo(prev => [...prev.slice(-9), logMessage]); // Keep last 10 logs
+  };
+
+  // Network status checker
+  const checkNetworkStatus = () => {
+    if ('navigator' in window && 'onLine' in navigator) {
+      const status = navigator.onLine ? 'online' : 'offline';
+      setNetworkStatus(status);
+      addDebugLog(`Network status: ${status}`);
+      return status === 'online';
+    }
+    return true;
+  };
+
   useEffect(() => {
+    addDebugLog(`Mobile device detected: ${isMobile}`);
+    addDebugLog(`User agent: ${navigator.userAgent}`);
+    
+    // Check network status
+    checkNetworkStatus();
+    window.addEventListener('online', checkNetworkStatus);
+    window.addEventListener('offline', checkNetworkStatus);
+    
     // Check if audio was previously unlocked
     const wasUnlocked = localStorage.getItem('audioUnlocked') === 'true';
     if (wasUnlocked) {
+      addDebugLog('Audio was previously unlocked, initializing...');
       setAudioUnlocked(true);
       setShowUnlockButton(false);
       initializeAudio();
@@ -69,6 +103,12 @@ const WaveFrequencySounds = () => {
 
     // Cleanup
     return () => {
+      window.removeEventListener('online', checkNetworkStatus);
+      window.removeEventListener('offline', checkNetworkStatus);
+      
+      // Clear any pending timeouts
+      loadTimeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      
       audioRefs.current.forEach(audio => {
         if (audio) {
           audio.pause();
@@ -79,17 +119,36 @@ const WaveFrequencySounds = () => {
         audioContextRef.current.close();
       }
     };
-  }, []);
+  }, [isMobile]);
 
   const initializeAudio = () => {
+    addDebugLog('Initializing audio elements...');
+    
     // Initialize audio elements only after user interaction
     frequencySounds.forEach((sound, index) => {
       if (!audioRefs.current[index]) {
+        addDebugLog(`Creating audio element for ${sound.name}`);
+        
         const audio = new Audio();
-        audio.preload = 'none'; // Don't preload until after user interaction
+        // Use metadata preloading for mobile, none for desktop
+        audio.preload = isMobile ? 'metadata' : 'none';
         audio.crossOrigin = 'anonymous';
         
+        // Set loading timeout
+        const timeoutId = setTimeout(() => {
+          addDebugLog(`Loading timeout for ${sound.name}`);
+          setLoadingStates(prev => {
+            const newStates = [...prev];
+            newStates[index] = false;
+            return newStates;
+          });
+          toast.error(`Loading timeout for ${sound.name}. Check your connection.`);
+        }, 30000); // 30 second timeout
+        
+        loadTimeoutRefs.current[index] = timeoutId;
+        
         audio.addEventListener('loadstart', () => {
+          addDebugLog(`Loading started for ${sound.name}`);
           setLoadingStates(prev => {
             const newStates = [...prev];
             newStates[index] = true;
@@ -97,7 +156,13 @@ const WaveFrequencySounds = () => {
           });
         });
         
+        audio.addEventListener('loadedmetadata', () => {
+          addDebugLog(`Metadata loaded for ${sound.name} (duration: ${audio.duration}s)`);
+        });
+        
         audio.addEventListener('canplay', () => {
+          addDebugLog(`Can play ${sound.name}`);
+          clearTimeout(loadTimeoutRefs.current[index]);
           setLoadingStates(prev => {
             const newStates = [...prev];
             newStates[index] = false;
@@ -106,17 +171,42 @@ const WaveFrequencySounds = () => {
         });
         
         audio.addEventListener('ended', () => {
+          addDebugLog(`Playback ended for ${sound.name}`);
           setActiveSound(null);
         });
         
-        audio.addEventListener('error', (e) => {
+        audio.addEventListener('error', (e: any) => {
+          addDebugLog(`Audio error for ${sound.name}: ${e.message || 'Unknown error'}`);
+          clearTimeout(loadTimeoutRefs.current[index]);
           setLoadingStates(prev => {
             const newStates = [...prev];
             newStates[index] = false;
             return newStates;
           });
-          console.error('Audio error:', e);
-          toast.error(`Failed to load ${sound.name}`);
+          
+          // Provide more specific error messages
+          let errorMessage = `Failed to load ${sound.name}`;
+          if (e.target?.error) {
+            switch (e.target.error.code) {
+              case 1: errorMessage += ' (Aborted)'; break;
+              case 2: errorMessage += ' (Network error)'; break;
+              case 3: errorMessage += ' (Decode error)'; break;
+              case 4: errorMessage += ' (Source not supported)'; break;
+            }
+          }
+          
+          toast.error(errorMessage);
+        });
+        
+        audio.addEventListener('progress', () => {
+          if (audio.buffered.length > 0) {
+            const bufferedEnd = audio.buffered.end(audio.buffered.length - 1);
+            const duration = audio.duration;
+            if (duration > 0) {
+              const bufferedPercent = (bufferedEnd / duration) * 100;
+              addDebugLog(`${sound.name} buffered: ${bufferedPercent.toFixed(1)}%`);
+            }
+          }
         });
         
         // Set source after all event listeners are attached
@@ -128,24 +218,43 @@ const WaveFrequencySounds = () => {
 
   const unlockAudio = async () => {
     try {
+      addDebugLog('Attempting to unlock audio...');
+      
       // Create and play a silent audio to unlock the audio context
       const audio = new Audio();
       audio.volume = 0;
       
       // Try to create AudioContext if it doesn't exist
       if (!audioContextRef.current) {
+        addDebugLog('Creating new AudioContext');
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
       
+      const updateContextState = () => {
+        const state = audioContextRef.current?.state || 'unknown';
+        setAudioContextState(state);
+        addDebugLog(`AudioContext state: ${state}`);
+      };
+      
+      updateContextState();
+      
       // Resume audio context if it's suspended
       if (audioContextRef.current.state === 'suspended') {
+        addDebugLog('Resuming suspended AudioContext');
         await audioContextRef.current.resume();
+        updateContextState();
       }
       
+      // For mobile devices, create a data URL for a silent audio
+      const silentAudioData = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAAAAAA==';
+      audio.src = silentAudioData;
+      
       // Play a silent audio to unlock
+      addDebugLog('Playing silent audio to unlock...');
       const playPromise = audio.play();
       if (playPromise) {
         await playPromise;
+        addDebugLog('Silent audio played successfully');
         audio.pause();
         audio.currentTime = 0;
       }
@@ -155,10 +264,12 @@ const WaveFrequencySounds = () => {
       localStorage.setItem('audioUnlocked', 'true');
       
       // Initialize audio elements after unlock
+      addDebugLog('Audio unlocked, initializing audio elements...');
       initializeAudio();
       
       toast.success('Audio unlocked! You can now play sounds.');
-    } catch (error) {
+    } catch (error: any) {
+      addDebugLog(`Failed to unlock audio: ${error.message || error}`);
       console.error('Failed to unlock audio:', error);
       toast.error('Failed to unlock audio. Please try again or check your browser settings.');
     }
@@ -174,16 +285,27 @@ const WaveFrequencySounds = () => {
   }, [isMuted]);
 
   const handleSoundToggle = async (index: number) => {
+    addDebugLog(`Sound toggle requested for ${frequencySounds[index].name}`);
+    
     if (!audioUnlocked) {
       toast.error('Please unlock audio first by clicking the "Start Audio" button.');
       return;
     }
 
+    if (!checkNetworkStatus()) {
+      toast.error('No network connection. Please check your internet.');
+      return;
+    }
+
     const audio = audioRefs.current[index];
-    if (!audio) return;
+    if (!audio) {
+      addDebugLog(`Audio element not found for index ${index}`);
+      return;
+    }
 
     if (activeSound === index) {
       // Pause current sound with fade out
+      addDebugLog(`Stopping ${frequencySounds[index].name}`);
       const fadeOut = () => {
         const fadeInterval = setInterval(() => {
           if (audio.volume > 0.1) {
@@ -203,20 +325,61 @@ const WaveFrequencySounds = () => {
     } else {
       // Stop any currently playing sound
       if (activeSound !== null && audioRefs.current[activeSound]) {
+        addDebugLog(`Stopping currently playing sound: ${frequencySounds[activeSound].name}`);
         audioRefs.current[activeSound]!.pause();
         audioRefs.current[activeSound]!.currentTime = 0;
         audioRefs.current[activeSound]!.volume = 1;
       }
       
       // Start new sound
+      addDebugLog(`Starting ${frequencySounds[index].name}`);
       audio.currentTime = 0;
       audio.volume = 0;
       
       try {
+        // Check if audio is ready to play
+        if (audio.readyState < 2) {
+          addDebugLog(`Audio not ready (readyState: ${audio.readyState}), attempting to load...`);
+          
+          // Try to load the audio
+          audio.load();
+          
+          // Wait for loadeddata event or timeout
+          await new Promise<void>((resolve, reject) => {
+            const loadTimeout = setTimeout(() => {
+              reject(new Error('Load timeout'));
+            }, 15000);
+            
+            const onLoadedData = () => {
+              clearTimeout(loadTimeout);
+              audio.removeEventListener('loadeddata', onLoadedData);
+              audio.removeEventListener('error', onError);
+              resolve();
+            };
+            
+            const onError = (e: any) => {
+              clearTimeout(loadTimeout);
+              audio.removeEventListener('loadeddata', onLoadedData);
+              audio.removeEventListener('error', onError);
+              reject(e);
+            };
+            
+            if (audio.readyState >= 2) {
+              clearTimeout(loadTimeout);
+              resolve();
+            } else {
+              audio.addEventListener('loadeddata', onLoadedData);
+              audio.addEventListener('error', onError);
+            }
+          });
+        }
+        
+        addDebugLog(`Audio ready (readyState: ${audio.readyState}), attempting to play...`);
         const playPromise = audio.play();
         
         if (playPromise) {
           await playPromise;
+          addDebugLog(`Playback started for ${frequencySounds[index].name}`);
           
           // Fade in
           const fadeIn = () => {
@@ -235,6 +398,7 @@ const WaveFrequencySounds = () => {
           toast.success(`Playing ${frequencySounds[index].name}`);
         }
       } catch (error: any) {
+        addDebugLog(`Playback error for ${frequencySounds[index].name}: ${error.message || error}`);
         console.error('Playback error:', error);
         
         if (error.name === 'NotAllowedError') {
@@ -242,8 +406,10 @@ const WaveFrequencySounds = () => {
           setAudioUnlocked(false);
           setShowUnlockButton(true);
           localStorage.removeItem('audioUnlocked');
+        } else if (error.message === 'Load timeout') {
+          toast.error(`Loading timeout for ${frequencySounds[index].name}. Please check your connection and try again.`);
         } else {
-          toast.error(`Failed to play ${frequencySounds[index].name}. Try refreshing the page.`);
+          toast.error(`Failed to play ${frequencySounds[index].name}. ${isMobile ? 'Try using headphones or' : ''} refresh the page.`);
         }
       }
     }
@@ -354,6 +520,35 @@ const WaveFrequencySounds = () => {
           ))}
         </div>
 
+        {/* Debug Panel (Development Only) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-8 max-w-4xl mx-auto">
+            <div className="bg-black/20 backdrop-blur-md border border-white/10 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle size={16} className="text-yellow-400" />
+                <h3 className="text-yellow-400 text-sm font-medium">Debug Information</h3>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4 text-xs">
+                <div>
+                  <p className="text-purple-300 mb-1">Status:</p>
+                  <p className="text-white">Audio Context: {audioContextState}</p>
+                  <p className="text-white">Network: {networkStatus}</p>
+                  <p className="text-white">Mobile: {isMobile ? 'Yes' : 'No'}</p>
+                  <p className="text-white">Audio Unlocked: {audioUnlocked ? 'Yes' : 'No'}</p>
+                </div>
+                <div>
+                  <p className="text-purple-300 mb-1">Recent Logs:</p>
+                  <div className="max-h-24 overflow-y-auto space-y-1">
+                    {debugInfo.slice(-5).map((log, i) => (
+                      <p key={i} className="text-gray-300 text-xs font-mono">{log}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="mt-16 text-center">
           <p className="text-purple-300 text-sm font-light">
@@ -362,7 +557,12 @@ const WaveFrequencySounds = () => {
           {audioUnlocked && (
             <p className="text-green-400 text-xs mt-2 flex items-center justify-center gap-1">
               <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-              Audio enabled
+              Audio enabled • Context: {audioContextState}
+            </p>
+          )}
+          {isMobile && (
+            <p className="text-blue-400 text-xs mt-1">
+              📱 Mobile detected • Touch to interact
             </p>
           )}
         </div>
