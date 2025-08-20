@@ -5,8 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ErrorBoundary from "./components/ErrorBoundary";
-import MobileBottomNav from "./components/MobileBottomNav";
-import { useMobile } from "./hooks/useMobile";
 import Index from "./pages/Index";
 import Meditate from "./pages/Meditate";
 import Learn from "./pages/Learn";
@@ -32,40 +30,35 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => {
-  return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter basename={import.meta.env.BASE_URL}>
-            <div className="relative min-h-screen">
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/meditate" element={<Meditate />} />
-                <Route path="/meditate/guided" element={<GuidedMeditationTypes />} />
-                <Route path="/meditate/guided/traditional" element={<TraditionalMeditation />} />
-                <Route path="/meditate/guided/training" element={<TrainingMeditation />} />
-                <Route path="/meditate/guided/cosmic" element={<CosmicMeditation />} />
-                <Route path="/meditate/guided/lucid" element={<LucidDreamingMeditation />} />
-                <Route path="/meditate/guided/nextlevel" element={<NextLevelMeditation />} />
-                <Route path="/meditate/silent" element={<SilentMeditation />} />
-                <Route path="/meditate/sounds" element={<WaveFrequencySounds />} />
-                <Route path="/meditate/breathwork" element={<BreathWork />} />
-                <Route path="/learn" element={<Learn />} />
-                <Route path="/learn/lesson/:id" element={<LessonDetail />} />
-                <Route path="/reflect" element={<Reflect />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-              <MobileBottomNav />
-            </div>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
-  );
-};
+const App = () => (
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter basename={import.meta.env.BASE_URL}>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/meditate" element={<Meditate />} />
+            <Route path="/meditate/guided" element={<GuidedMeditationTypes />} />
+            <Route path="/meditate/guided/traditional" element={<TraditionalMeditation />} />
+            <Route path="/meditate/guided/training" element={<TrainingMeditation />} />
+            <Route path="/meditate/guided/cosmic" element={<CosmicMeditation />} />
+            <Route path="/meditate/guided/lucid" element={<LucidDreamingMeditation />} />
+            <Route path="/meditate/guided/nextlevel" element={<NextLevelMeditation />} />
+            <Route path="/meditate/silent" element={<SilentMeditation />} />
+            <Route path="/meditate/sounds" element={<WaveFrequencySounds />} />
+            <Route path="/meditate/breathwork" element={<BreathWork />} />
+            <Route path="/learn" element={<Learn />} />
+            <Route path="/learn/lesson/:id" element={<LessonDetail />} />
+            <Route path="/reflect" element={<Reflect />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
+);
 
 export default App;
