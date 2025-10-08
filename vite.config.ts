@@ -7,8 +7,8 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => {
   const isDev = mode === "development";
   return {
-    // Use root in dev for working preview, subpath in prod for deployment under /zen-reset/
-    base: isDev ? "/" : "/zen-reset/",
+    // Use root path for mobile app compatibility
+    base: "/",
     server: {
       host: "::",
       port: 8080,
