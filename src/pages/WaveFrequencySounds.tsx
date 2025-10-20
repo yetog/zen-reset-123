@@ -59,8 +59,17 @@ const WaveFrequencySounds = () => {
     // Initialize audio elements
     frequencySounds.forEach((sound, index) => {
       if (!audioRefs.current[index]) {
-        const audio = new Audio(sound.audioUrl);
-        audio.preload = 'metadata';
+        const audio = new Audio();
+        
+        // Mobile optimization: Don't preload on mobile to avoid loading issues
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (!isMobile) {
+          audio.preload = 'metadata';
+          audio.src = sound.audioUrl;
+        }
+        
+        // Clear loading state after a timeout if canplay doesn't fire (mobile issue)
+        let loadingTimeout: NodeJS.Timeout;
         
         audio.addEventListener('loadstart', () => {
           setLoadingStates(prev => {
@@ -68,9 +77,28 @@ const WaveFrequencySounds = () => {
             newStates[index] = true;
             return newStates;
           });
+          
+          // Mobile fallback: Clear loading after 3 seconds if canplay doesn't fire
+          loadingTimeout = setTimeout(() => {
+            setLoadingStates(prev => {
+              const newStates = [...prev];
+              newStates[index] = false;
+              return newStates;
+            });
+          }, 3000);
         });
         
         audio.addEventListener('canplay', () => {
+          clearTimeout(loadingTimeout);
+          setLoadingStates(prev => {
+            const newStates = [...prev];
+            newStates[index] = false;
+            return newStates;
+          });
+        });
+        
+        audio.addEventListener('loadeddata', () => {
+          clearTimeout(loadingTimeout);
           setLoadingStates(prev => {
             const newStates = [...prev];
             newStates[index] = false;
@@ -83,6 +111,7 @@ const WaveFrequencySounds = () => {
         });
         
         audio.addEventListener('error', () => {
+          clearTimeout(loadingTimeout);
           setLoadingStates(prev => {
             const newStates = [...prev];
             newStates[index] = false;
@@ -115,7 +144,7 @@ const WaveFrequencySounds = () => {
     });
   }, [isMuted]);
 
-  const handleSoundToggle = (index: number) => {
+  const handleSoundToggle = async (index: number) => {
     const audio = audioRefs.current[index];
     if (!audio) return;
 
@@ -131,14 +160,82 @@ const WaveFrequencySounds = () => {
         audioRefs.current[activeSound]!.currentTime = 0;
       }
       
-      // Start new sound
-      audio.currentTime = 0;
-      audio.play().then(() => {
-        setActiveSound(index);
-        toast.success(`Playing ${frequencySounds[index].name}`);
-      }).catch(() => {
-        toast.error(`Failed to play ${frequencySounds[index].name}`);
+      // Mobile optimization: Set source only when playing (not during preload)
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if (isMobile && !audio.src) {
+        audio.src = frequencySounds[index].audioUrl;
+      }
+      
+      // Show loading state while trying to play
+      setLoadingStates(prev => {
+        const newStates = [...prev];
+        newStates[index] = true;
+        return newStates;
       });
+      
+      // Start new sound - Critical mobile fix
+      audio.currentTime = 0;
+      
+      try {
+        // Mobile fix: Handle play promise properly and add user interaction
+        const playPromise = audio.play();
+        
+        if (playPromise !== undefined) {
+          await playPromise;
+          setActiveSound(index);
+          setLoadingStates(prev => {
+            const newStates = [...prev];
+            newStates[index] = false;
+            return newStates;
+          });
+          toast.success(`Playing ${frequencySounds[index].name}`);
+        }
+      } catch (error) {
+        console.error('Failed to play audio:', error);
+        setLoadingStates(prev => {
+          const newStates = [...prev];
+          newStates[index] = false;
+          return newStates;
+        });
+        
+        // Check if it's an autoplay policy error (common on mobile)
+        if (error.name === 'NotAllowedError') {
+          toast.error(`Tap the play button to start audio on mobile`);
+        } else {
+          toast.error(`Failed to play ${frequencySounds[index].name}. Check your internet connection.`);
+        }
+        
+        // Mobile fallback: Try again after user interaction
+        setTimeout(async () => {
+          try {
+            setLoadingStates(prev => {
+              const newStates = [...prev];
+              newStates[index] = true;
+              return newStates;
+            });
+            
+            const retryPromise = audio.play();
+            if (retryPromise !== undefined) {
+              await retryPromise;
+              setActiveSound(index);
+              setLoadingStates(prev => {
+                const newStates = [...prev];
+                newStates[index] = false;
+                return newStates;
+              });
+              toast.success(`Playing ${frequencySounds[index].name}`);
+            }
+          } catch (retryError) {
+            console.error('Retry failed:', retryError);
+            setLoadingStates(prev => {
+              const newStates = [...prev];
+              newStates[index] = false;
+              return newStates;
+            });
+            toast.error(`Audio playback requires user interaction on this device`);
+          }
+        }, 500);
+      }
     }
   };
 

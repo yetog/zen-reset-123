@@ -94,6 +94,7 @@ The following Capacitor plugins are installed:
 ### Audio Issues on Mobile
 - Audio requires user interaction to start (tap to play)
 - Ensure proper permissions in native configs
+- **FIXED**: Constant spinning loading issue in Wave Frequency Sounds (see MOBILE_AUDIO_FIXES.md)
 
 ### Build Errors
 - Run `npx cap sync` after any dependency changes
